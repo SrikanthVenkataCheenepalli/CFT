@@ -7,15 +7,13 @@ env:
 phases:
   install:
     commands:
-      - sudo yum update  -y
-      - sudo yum cargo -y
-      - sudo yum install git -y
+      - yum update -y
+      - yum cargo -y
+      - yum install git -y
   pre_build:
     commands:
       - echo "Setting up the environment for AWS CloudFormation Guard"
       - echo "More info https://github.com/aws-cloudformation/cloudformation-guard"
-      - echo "Install Rust"
-      - curl https://sh.rustup.rs -sSf | sh -s -- -y
   build:
     commands:
        - echo "Pull GA release from github"
