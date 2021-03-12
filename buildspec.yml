@@ -8,8 +8,9 @@ phases:
   install:
     commands:
       - yum update -y
-      - yum cargo -y
+      - yum install cargo -y
       - yum install git -y
+      - pip install cfn-lint
   pre_build:
     commands:
       - echo "Setting up the environment for AWS CloudFormation Guard"
@@ -26,6 +27,7 @@ phases:
        - echo "Validate CloudFormation template with cfn-guard tool"
        - echo "More information https://github.com/aws-cloudformation/cloudformation-guard/blob/master/cfn-guard/README.md"
        - cfn-guard-linux/cfn-guard check --rule_set $CF_ORG_RULESET --template $CF_TEMPLATE --strict-checks
+       - cfn-lint $CF_TEMPLATE
 artifacts:
   files:
     - s3-cft-dev.yml
