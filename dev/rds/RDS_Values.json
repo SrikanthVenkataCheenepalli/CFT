@@ -1,0 +1,35 @@
+[
+    {
+      "ParameterKey": "pEnv",
+      "ParameterValue": "Dev"
+    },
+    {
+      "ParameterKey": "pDBBackupRetentionPeriod",
+      "ParameterValue": "30"
+    },
+    {
+      "ParameterKey": "pEnableDataApi",
+      "ParameterValue": "false"
+    },
+    {
+      "ParameterKey": "pAutoPause",
+      "ParameterValue": "true"
+    },
+    {
+      "ParameterKey": "pMinCapacity",
+      "ParameterValue": "16"
+    },
+    {
+      "ParameterKey": "pMaxCapacity",
+      "ParameterValue": "64"
+    },
+    {
+      "ParameterKey": "pSecondsUntilAutoPause",
+      "ParameterValue": "300"
+    },
+    {
+      "ParameterKey": "pEngineVersion",
+      "ParameterValue": "10.12"
+    }                     
+   
+]
