@@ -1,0 +1,201 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation Template to provision S3 Buckets
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Name of S3 Bucket
+  
+  KMSMasterKeyID:
+    Description: Provide the KMS Details
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /KMS/Key/CrmDev/Alias/ARN
+
+  pAppID:
+    Description: SSM Parameter for AppID
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: /general/appid
+
+  pEnvironment:
+    Description: SSM Parameter for Environment
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: /general/environment
+
+  pOwner:
+    Description: SSM Parameter for Owner
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: /general/owner
+
+  pCompliance:
+    Description: SSM Parameter for Compliance
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: /general/Compliance
+
+  pNotify:
+    Description: SSM Parameter for Notification
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: /general/notify
+
+  pDataClassification:
+    Description: SSM Parameter for Data Classification
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: /general/DataClassification
+
+  pCRIS:
+    Description: SSM Parameter for CRIS
+    Type : 'AWS::SSM::Parameter::Value<String>'
+    Default: /general/CRIS
+
+  Versioning:
+    Description: Does versioning needs to be enabled?
+    Type: String
+    AllowedValues:
+    - 'true'
+    - 'false'
+    Default: 'false'
+
+Conditions: 
+  EnableVersioning: !Equals [!Ref Versioning, "true"]
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+      AccessControl: Private
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+                SSEAlgorithm: aws:kms
+                KMSMasterKeyID: !Ref KMSMasterKeyID
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        'Fn::If':
+          - EnableVersioning
+          - Status: "Enabled"
+          - !Ref "AWS::NoValue" 
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: logs/
+      Tags:
+        - Key: AppID
+          Value: !Ref pAppID
+        - Key: Environment
+          Value: !Ref pEnvironment
+        - Key: Owner
+          Value: !Ref pOwner
+        - Key: Compliance
+          Value: !Ref pCompliance
+        - Key: Notify
+          Value: !Ref pNotify
+        - Key: Data Classification
+          Value: !Ref pDataClassification
+        - Key: CRIS
+          Value: !Ref pCRIS
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument: 
+        Statement:
+          - Sid: "BucketLevelAccess"
+            Action: 
+              - "s3:ListBucket"
+            Effect: "Allow"
+            Resource: !Sub 'arn:aws:s3:::${S3BucketName}'
+            Principal: 
+              AWS: '*'
+          - Sid: "ObjectLevelAccess"
+            Action: 
+              - "s3:PutObject"
+              - "s3:GetObject"  
+              - "s3:DeleteObject"
+            Effect: "Allow"
+            Resource: !Sub 'arn:aws:s3:::${S3BucketName}/*'
+            Principal: 
+              AWS: '*'
+          - Sid: "DenyHttp"
+            Action: 
+              - "s3:PutObject"
+              - "s3:GetObject"
+            Effect: "Deny"
+            Resource: !Sub 'arn:aws:s3:::${S3BucketName}/*'
+            Principal: "*"
+            Condition:
+              Bool:
+                'aws:SecureTransport': "false" 
+                
+  LoggingBucket:
+    Type: 'AWS::S3::Bucket'
+ #   DeletionPolicy: Retain
+    Properties:
+      AccessControl: LogDeliveryWrite
+      BucketName: !Sub logging-${S3BucketName}
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: "MoveLogstoIAafter60days"
+            Prefix: logs/
+            Status: Enabled
+            Transitions: 
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+          - Id: "DeleteLogsAfter2Years"
+            Prefix: logs/
+            Status: Enabled
+            ExpirationInDays: 730
+  
+  LoggingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LoggingBucket
+      PolicyDocument: 
+        Statement:
+          - Sid: "ObjectLevelAccess"
+            Action: 
+              - "s3:*"
+            Effect: "Allow"
+            Resource: !Sub 'arn:aws:s3:::logging-${S3BucketName}/*'
+            Principal: 
+              Service: 's3.amazonaws.com'
+
+          - Sid: "LogsFolderAccess"
+            Action: 
+              - "s3:*"  
+            Effect: "Allow"
+            Resource: !Sub 'arn:aws:s3:::logging-${S3BucketName}/logs/*'
+            Principal: 
+              Service: 's3.amazonaws.com' 
+ 
+Outputs:
+  S3BucketName:
+    Description: Name of the S3 Bucket
+    Value: !Ref S3Bucket
+  S3BucketArn:
+    Description: The ARN of S3 Bucket
+    Value: !GetAtt S3Bucket.Arn
+  S3BucketURL:
+    Description: The Website URL of the S3 Bucket
+    Value: !GetAtt S3Bucket.WebsiteURL
+  LoggingBucketName:
+    Description: Name of the S3 Logging Bucket
+    Value: !Ref LoggingBucket
+  LoggingBucketArn:
+    Description: The ARN of S3 Logging Bucket
+    Value: !GetAtt LoggingBucket.Arn
+  LoggingBucketURL:
+    Description: The Website URL of the S3 Logging Bucket
+    Value: !GetAtt LoggingBucket.WebsiteURL
