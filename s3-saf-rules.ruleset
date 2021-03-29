@@ -1,2 +1,0 @@
-AWS::S3::Bucket BucketName == s3devcft9998
-AWS::S3::Bucket PublicAccessBlockConfiguration == {"BlockPublicAcls":"TRUE","BlockPublicPolicy":"TRUE","IgnorePublicAcls":"TRUE","RestrictPublicBuckets":"TRUE"}
